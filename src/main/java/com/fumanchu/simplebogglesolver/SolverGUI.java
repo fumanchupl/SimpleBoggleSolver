@@ -259,6 +259,7 @@ public class SolverGUI extends javax.swing.JFrame {
 
   private void buttonResetActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonResetActionPerformed
     pressCreate();
+    ((MyListModel)listResults.getModel()).clear();
   }//GEN-LAST:event_buttonResetActionPerformed
 
   /**
@@ -320,6 +321,9 @@ public class SolverGUI extends javax.swing.JFrame {
   // End of variables declaration//GEN-END:variables
   private final int BOARD_ROWS = 4;
   private final int BOARD_COLS = 4;
+  private final Color START_TILE_COLOR = new Color(80, 240, 80);
+  private final Color TILE_COLOR = new Color(232, 237, 76);
+  private final Color TILE_CLEAR = new Color(146, 183, 219);
   private BoggleBoard board;
   private Solver solver;
   private BoardPanel boardPanel;
@@ -371,14 +375,14 @@ public class SolverGUI extends javax.swing.JFrame {
       listResults.setSelectedIndex(0);
       selectWord();
     }
-    //boardPanel.removeTileListeners();
+    boardPanel.removeTileListeners();
   }
   
   private void selectWord() {
     if (listResults.getSelectedIndex() >= 0) {
       path = ((MyListModel) listResults.getModel()).get(listResults.getSelectedIndex());
       boardPanel.clearBoard();
-      boardPanel.highlightCubes();
+      boardPanel.highlightTiles();
       listResults.ensureIndexIsVisible(listResults.getSelectedIndex());
     }
   }
@@ -387,8 +391,8 @@ public class SolverGUI extends javax.swing.JFrame {
 
     private final int NUM_OF_TILES = BOARD_ROWS * BOARD_COLS;
     private final JLabel[] tiles = new JLabel[NUM_OF_TILES];
-    private final int TILE_DIM = 60;
-    //private final TileMouseListener tileMouseListener;
+    private final int TILE_DIM = 60; 
+    private final TileMouseListener tileMouseListener;
 
     /**
      * Constructor for the board which the user interacts with in order to play
@@ -408,10 +412,10 @@ public class SolverGUI extends javax.swing.JFrame {
         tiles[i].setMaximumSize(tiles[i].getPreferredSize());
         tiles[i].setBorder(BorderFactory.createRaisedBevelBorder());
         tiles[i].setOpaque(true);
-        tiles[i].setBackground(new Color(146, 183, 219));
+        tiles[i].setBackground(TILE_CLEAR);
         this.add(tiles[i]);
       }
-      //tileMouseListener = new TileMouseListener();
+      tileMouseListener = new TileMouseListener();
     }
 
     /**
@@ -419,8 +423,8 @@ public class SolverGUI extends javax.swing.JFrame {
      */
     public void clearBoard() {
       for (int i = 0; i < tiles.length; ++i) {
-        tiles[i].setBackground(new Color(146, 183, 219));
-        //tiles[i].removeMouseListener(tileMouseListener);
+        tiles[i].setBackground(TILE_CLEAR);
+        tiles[i].removeMouseListener(tileMouseListener);
       }
     }
 
@@ -434,20 +438,20 @@ public class SolverGUI extends javax.swing.JFrame {
         for (int j = 0; j < BOARD_COLS; j++) {
           char letter = board.getLetter(i, j);
           tiles[i * BOARD_COLS + j].setText("" + letter);
-          //tiles[i * BOARD_COLS + j].addMouseListener(tileMouseListener);
+          tiles[i * BOARD_COLS + j].addMouseListener(tileMouseListener);
         }
       }
     }
 
     /**
-     * Highlight all the cubes in the path array
+     * Highlight all the tiles in the path array
      */
-    public void highlightCubes() {
+    public void highlightTiles() {
       for (int i = 0; i < path.length; i++) {
         if (0 == i) {
-          tiles[path[i]].setBackground(new Color(80, 240, 80));
+          tiles[path[i]].setBackground(START_TILE_COLOR);
         } else {
-          tiles[path[i]].setBackground(new Color(232, 237, 76));
+          tiles[path[i]].setBackground(TILE_COLOR);
         }
         repaint();
       }
@@ -475,11 +479,11 @@ public class SolverGUI extends javax.swing.JFrame {
       }
     }
 
-//    private void removeTileListeners() {
-//      for (int i = 0; i < tiles.length; ++i) {
-//        tiles[i].removeMouseListener(tileMouseListener);
-//      }
-//    }
+    private void removeTileListeners() {
+      for (int i = 0; i < tiles.length; ++i) {
+        tiles[i].removeMouseListener(tileMouseListener);
+      }
+    }
   }
 
   private class MyListModel extends AbstractListModel {
@@ -542,4 +546,48 @@ public class SolverGUI extends javax.swing.JFrame {
     }
   }
   
+  private class TileMouseListener implements java.awt.event.MouseListener, java.awt.event.MouseMotionListener {
+    private boolean pressed = false;
+    public void mouseClicked(MouseEvent e) {
+      statusBar.setText(((JLabel)e.getComponent()).getText());
+      
+    }
+
+    public void mousePressed(MouseEvent e) {
+      statusBar.setText(String.format("Pressed %d", e.getButton()));
+      if (null == solver) {
+        JOptionPane.showMessageDialog(e.getComponent().getParent(), "Please load the dictionary first.");
+        return;
+      }
+      if (1 == e.getButton()){
+        e.getComponent().setBackground(START_TILE_COLOR);
+        pressed = true;
+      }
+    }
+
+    public void mouseReleased(MouseEvent e) {
+      statusBar.setText("Released.");
+      pressed = false;
+    }
+
+    public void mouseEntered(MouseEvent e) {
+      statusBar.setText(String.format("Entered: %d, %d; %d", e.getX(), e.getY(), e.getButton()));
+      if (pressed) {
+        e.getComponent().setBackground(TILE_COLOR);
+      }
+    }
+
+    public void mouseExited(MouseEvent e) {
+      statusBar.setText(String.format("Exited: %d, %d", e.getX(), e.getY()));
+    }
+
+    public void mouseDragged(MouseEvent e) {
+      statusBar.setText(String.format("Dragged: %d, %d", e.getX(), e.getY()));
+    }
+
+    public void mouseMoved(MouseEvent e) {
+      
+    }
+    
+  }
 }
