@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.SortedMap;
+import java.util.TreeMap;
 import javax.swing.AbstractListModel;
 import javax.swing.BorderFactory;
 import javax.swing.JFileChooser;
@@ -212,12 +213,16 @@ public class SolverGUI extends javax.swing.JFrame {
       try {
         statusBar.setForeground(Color.BLACK);
         DictionaryLoader dic = new DictionaryLoader(jfc.getSelectedFile().getCanonicalPath());
-        solver = new Solver(dic.dictionary());
+        try {
+          solver = new Solver(dic.dictionary());
+        } catch (java.lang.IllegalArgumentException e){
+          throw new java.io.IOException();
+        }        
         statusBar.setText(String.format("Dictionary size: %d", dic.size()));
       } catch (java.io.IOException ex) {
         statusBar.setText("No dictionary loaded.");
         statusBar.setForeground(Color.RED);
-        JOptionPane.showMessageDialog(this, "Couldn't load dictionary");
+        JOptionPane.showMessageDialog(this, "Couldn't load dictionary or dictionary in incorrect format.");
       }
     }
   }//GEN-LAST:event_loadDictActionPerformed
@@ -259,7 +264,7 @@ public class SolverGUI extends javax.swing.JFrame {
 
   private void buttonResetActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_buttonResetActionPerformed
     pressCreate();
-    ((MyListModel)listResults.getModel()).clear();
+    listResults.setModel(new MyListModel(null));
   }//GEN-LAST:event_buttonResetActionPerformed
 
   /**
@@ -361,7 +366,7 @@ public class SolverGUI extends javax.swing.JFrame {
       }
       board = new BoggleBoard(a);
       boardPanel.setBoard();
-      solve();
+      //solve();
     }
   }
   
@@ -375,7 +380,6 @@ public class SolverGUI extends javax.swing.JFrame {
       listResults.setSelectedIndex(0);
       selectWord();
     }
-    boardPanel.removeTileListeners();
   }
   
   private void selectWord() {
@@ -417,7 +421,6 @@ public class SolverGUI extends javax.swing.JFrame {
         this.add(tiles[i]);
       }
       tileMouseListener = new TileMouseListener();
-      addTileListeners();
     }
 
     /**
@@ -427,6 +430,7 @@ public class SolverGUI extends javax.swing.JFrame {
       for (int i = 0; i < tiles.length; ++i) {
         tiles[i].setBackground(TILE_CLEAR);
       }
+      removeTileListeners();
     }
 
     /**
@@ -441,6 +445,7 @@ public class SolverGUI extends javax.swing.JFrame {
           tiles[i * BOARD_COLS + j].setText("" + letter);
         }
       }
+      addTileListeners();
     }
 
     /**
@@ -502,8 +507,12 @@ public class SolverGUI extends javax.swing.JFrame {
     private final SortedMap<String, List<Integer>> delegate;
 
     public MyListModel(SortedMap<String, List<Integer>> map) {
-      delegate = map;
-      fireIntervalAdded(this, 0, map.size());
+      if (null == map){
+        delegate = new TreeMap<String, List<Integer>>();
+      } else {
+        delegate = map;
+      }
+      fireIntervalAdded(this, 0, delegate.size());
     }
 
     @Override
