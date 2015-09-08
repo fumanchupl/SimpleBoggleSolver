@@ -18,7 +18,7 @@ import edu.princeton.cs.algorithms.TST;
  * @author Fu Manchu
  */
 public class Solver {
-  private TST<Integer> dictionary;
+  private final TST<Integer> dictionary;
 
   // Initializes the data structure using the given array of strings as the dictionary.
   // (You can assume each word in the dictionary contains only the uppercase letters A through Z.)
@@ -36,7 +36,6 @@ public class Solver {
     boolean[] marked = new boolean[board.cols() * board.rows()];
     for (int r = 0; r < board.rows(); ++r) {
       for (int c = 0; c < board.cols(); ++c) {
-        //System.out.println("r:" + r + ", c:" + c + "=" + asID(r, c, board.cols()));
         marked[asID(r, c, board.cols())] = true;
         dfsBoard(r, c, board, new StringBuilder(), marked, wordSet, new Stack<Integer>());
       }
@@ -118,7 +117,6 @@ public class Solver {
         path.add((Integer)e.nextElement());
       }
       words.put(prefix.toString(), path);
-      //words.add(prefix.toString());
     }
     marked[asID(r, c, cols)] = false;
     steps.pop();

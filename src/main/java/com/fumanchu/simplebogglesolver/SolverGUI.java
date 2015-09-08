@@ -1,11 +1,9 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
+
 package com.fumanchu.simplebogglesolver;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -14,6 +12,8 @@ import java.awt.GridBagConstraints;
 import java.awt.GridLayout;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.SortedMap;
 import javax.swing.AbstractListModel;
@@ -382,7 +382,7 @@ public class SolverGUI extends javax.swing.JFrame {
     if (listResults.getSelectedIndex() >= 0) {
       path = ((MyListModel) listResults.getModel()).get(listResults.getSelectedIndex());
       boardPanel.clearBoard();
-      boardPanel.highlightTiles();
+      boardPanel.highlightPath();
       listResults.ensureIndexIsVisible(listResults.getSelectedIndex());
     }
   }
@@ -413,9 +413,11 @@ public class SolverGUI extends javax.swing.JFrame {
         tiles[i].setBorder(BorderFactory.createRaisedBevelBorder());
         tiles[i].setOpaque(true);
         tiles[i].setBackground(TILE_CLEAR);
+        tiles[i].setName(Integer.toString(i));
         this.add(tiles[i]);
       }
       tileMouseListener = new TileMouseListener();
+      addTileListeners();
     }
 
     /**
@@ -424,7 +426,6 @@ public class SolverGUI extends javax.swing.JFrame {
     public void clearBoard() {
       for (int i = 0; i < tiles.length; ++i) {
         tiles[i].setBackground(TILE_CLEAR);
-        tiles[i].removeMouseListener(tileMouseListener);
       }
     }
 
@@ -438,7 +439,6 @@ public class SolverGUI extends javax.swing.JFrame {
         for (int j = 0; j < BOARD_COLS; j++) {
           char letter = board.getLetter(i, j);
           tiles[i * BOARD_COLS + j].setText("" + letter);
-          tiles[i * BOARD_COLS + j].addMouseListener(tileMouseListener);
         }
       }
     }
@@ -446,7 +446,7 @@ public class SolverGUI extends javax.swing.JFrame {
     /**
      * Highlight all the tiles in the path array
      */
-    public void highlightTiles() {
+    public void highlightPath() {
       for (int i = 0; i < path.length; i++) {
         if (0 == i) {
           tiles[path[i]].setBackground(START_TILE_COLOR);
@@ -456,6 +456,13 @@ public class SolverGUI extends javax.swing.JFrame {
         repaint();
       }
     }
+    
+    public void clearPath(){
+      for (int i = 0; i < tiles.length; ++i) {
+        tiles[i].setBackground(TILE_CLEAR);
+      }
+      repaint();
+    }
 
     @Override
     public void paint(Graphics g) {
@@ -464,7 +471,7 @@ public class SolverGUI extends javax.swing.JFrame {
     }
 
     @Override
-    public void update(Graphics g) {
+    public void update(Graphics g) { 
       Graphics2D g2d = (Graphics2D)g;
       if (null != path && path.length > 0) {
         int xs[] = new int[path.length];
@@ -480,9 +487,13 @@ public class SolverGUI extends javax.swing.JFrame {
     }
 
     private void removeTileListeners() {
-      for (int i = 0; i < tiles.length; ++i) {
-        tiles[i].removeMouseListener(tileMouseListener);
-      }
+      removeMouseListener(tileMouseListener);
+      removeMouseMotionListener(tileMouseListener);
+    }
+    
+    private void addTileListeners() {
+      addMouseListener(tileMouseListener);
+      addMouseMotionListener(tileMouseListener);
     }
   }
 
@@ -548,46 +559,96 @@ public class SolverGUI extends javax.swing.JFrame {
   
   private class TileMouseListener implements java.awt.event.MouseListener, java.awt.event.MouseMotionListener {
     private boolean pressed = false;
+    private final List<Integer> wordPath = new ArrayList<Integer>();
+    private int x1, x2, y1, y2;
+    private final int DIVISOR = 5;
+    private final StringBuilder sb = new StringBuilder(BOARD_ROWS * BOARD_COLS);
+    
     public void mouseClicked(MouseEvent e) {
-      statusBar.setText(((JLabel)e.getComponent()).getText());
-      
+      //surpress
     }
 
     public void mousePressed(MouseEvent e) {
-      statusBar.setText(String.format("Pressed %d", e.getButton()));
       if (null == solver) {
         JOptionPane.showMessageDialog(e.getComponent().getParent(), "Please load the dictionary first.");
         return;
       }
-      if (1 == e.getButton()){
-        e.getComponent().setBackground(START_TILE_COLOR);
-        pressed = true;
+      Component tile = e.getComponent().getComponentAt(e.getX(), e.getY());
+      if (1 == e.getButton() && null != tile){
+        if (wordPath.size() > 0) {
+          boardPanel.clearPath();
+          wordPath.clear();
+          path = null;
+        }
+        tile.setBackground(START_TILE_COLOR);        
+        pressed = true;        
+        wordPath.add(Integer.decode(tile.getName()));
+        sb.delete(0, sb.length());
+        sb.append(((JLabel)tile).getText());
       }
+      statusBar.setText(sb.toString());
     }
 
     public void mouseReleased(MouseEvent e) {
-      statusBar.setText("Released.");
       pressed = false;
     }
 
     public void mouseEntered(MouseEvent e) {
-      statusBar.setText(String.format("Entered: %d, %d; %d", e.getX(), e.getY(), e.getButton()));
-      if (pressed) {
-        e.getComponent().setBackground(TILE_COLOR);
-      }
+      //surpress
     }
 
     public void mouseExited(MouseEvent e) {
-      statusBar.setText(String.format("Exited: %d, %d", e.getX(), e.getY()));
+      //surpress
     }
 
     public void mouseDragged(MouseEvent e) {
-      statusBar.setText(String.format("Dragged: %d, %d", e.getX(), e.getY()));
+      Component tile = e.getComponent().getComponentAt(e.getX(), e.getY());
+      if (pressed && null != tile) {        
+        x1 = tile.getX() + tile.getWidth()/DIVISOR;
+        y1 = tile.getY() + tile.getHeight()/DIVISOR;
+        x2 = tile.getX() + tile.getWidth() - tile.getWidth()/DIVISOR;
+        y2 = tile.getY() + tile.getHeight() - tile.getHeight()/DIVISOR;
+        Integer id = Integer.decode(tile.getName());
+        if (wordPath.contains(id)) {
+          return;
+        }
+        if (!isNeigbor(wordPath.get(wordPath.size()-1), id)) {
+          return;
+        }
+        if (x1 <= e.getX() && e.getX() <= x2 &&
+                y1 <= e.getY() && e.getY() <= y2) {
+          tile.setBackground(TILE_COLOR);
+          wordPath.add(id);
+          path = new int[wordPath.size()];
+          Iterator<Integer> it = wordPath.iterator();          
+          for (int i =0; it.hasNext(); ++i){
+            path[i] = it.next().intValue();
+          }
+          sb.append(boardPanel.tiles[id.intValue()].getText());
+          repaint();
+        }        
+        statusBar.setText(sb.toString());
+      }
     }
 
     public void mouseMoved(MouseEvent e) {
-      
+      //surpress
     }
     
+    
+    public boolean isNeigbor(Integer neighborCandidate, Integer id){
+      Component c = boardPanel.tiles[neighborCandidate.intValue()];
+      int x1 = c.getX() + c.getWidth()/2;
+      int y1 = c.getY() + c.getHeight()/2;
+      c = boardPanel.tiles[id.intValue()];
+      int x2 = c.getX() + c.getWidth()/2;
+      int y2 = c.getY() + c.getHeight()/2;
+      int horizontal = Math.abs(x1-x2);
+      int vertical = Math.abs(y1-y2);
+      if (horizontal <= c.getWidth() && vertical <= c.getHeight()) {
+        return true;
+      }
+      return false;
+    }
   }
 }
